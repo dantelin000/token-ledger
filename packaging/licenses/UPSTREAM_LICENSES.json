@@ -1,0 +1,30 @@
+{
+  "OPENSSL.txt": {
+    "source": "https://raw.githubusercontent.com/openssl/openssl/openssl-3.0.18/LICENSE.txt",
+    "sha256": "7d5450cb2d142651b8afa315b5f238efc805dad827d91ba367d8516bc9d49e7a"
+  },
+  "TK.txt": {
+    "source": "https://raw.githubusercontent.com/tcltk/tk/core-8-6-17/license.terms",
+    "sha256": "2cde822b93ca16ae535c954b7dfe658b4ad10df2a193628d1b358f1765e8b198"
+  },
+  "TCL.txt": {
+    "source": "https://raw.githubusercontent.com/tcltk/tcl/core-8-6-17/license.terms",
+    "sha256": "c0a69a2bfd757361ec7e6143973b103c90409316b49e9c88db26ad6388e79f16"
+  },
+  "PYTHON.txt": {
+    "source": "https://raw.githubusercontent.com/python/cpython/v3.13.18/LICENSE",
+    "sha256": "78b12c3a81360b357002334f0e70ea0e92eebf7a9b358805c03c48484945f3bb"
+  },
+  "ZSTD.txt": {
+    "source": "https://raw.githubusercontent.com/facebook/zstd/v1.5.7/LICENSE",
+    "sha256": "7055266497633c9025b777c78eb7235af13922117480ed5c674677adc381c9d8"
+  },
+  "LIBFFI.txt": {
+    "source": "https://raw.githubusercontent.com/libffi/libffi/v3.4.8/LICENSE",
+    "sha256": "67894089811f93fca47a76f85e017da6f8582d4ba0905963c6e0f1ad6df7a195"
+  },
+  "ZLIB.txt": {
+    "source": "https://raw.githubusercontent.com/madler/zlib/v1.3.1/LICENSE",
+    "sha256": "845efc77857d485d91fb3e0b884aaa929368c717ae8186b66fe1ed2495753243"
+  }
+}

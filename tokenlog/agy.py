@@ -148,6 +148,22 @@ def _indices(generator: dict) -> list[int]:
     return result
 
 
+def _session_id(metadata: dict, cascade_id: str) -> str:
+    # CortexTrajectoryMetadata.root_conversation_id is field 6. Child agents
+    # have their own cascade/database IDs but belong to this visible session.
+    # Verified against the installed agy protobuf descriptor and local headers.
+    # Do not infer relationships from projects, models, times or parent chains.
+    root = _first(metadata, 6)
+    if isinstance(root, bytes):
+        try:
+            identity = root.decode("utf-8").strip()
+        except UnicodeDecodeError:
+            identity = ""
+        if identity and len(identity) <= 256 and not any(ord(c) < 32 for c in identity):
+            return identity
+    return cascade_id
+
+
 def _parse_connection(connection: sqlite3.Connection, path: Path) -> ParseResult:
     result = ParseResult()
     tables = {r[0] for r in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
@@ -156,7 +172,7 @@ def _parse_connection(connection: sqlite3.Connection, path: Path) -> ParseResult
         return result
     trajectory = connection.execute("SELECT trajectory_id,cascade_id FROM trajectory_meta LIMIT 1").fetchone()
     trajectory_id = trajectory[0] if trajectory else path.stem
-    session_id = trajectory[1] if trajectory else path.stem
+    session_id = trajectory[1] if trajectory and trajectory[1] else path.stem
     metadata = {}
     malformed = 0
     if "trajectory_metadata_blob" in tables:
@@ -166,6 +182,7 @@ def _parse_connection(connection: sqlite3.Connection, path: Path) -> ParseResult
                 metadata = _fields(row[0])
             except (ValueError, TypeError, IndexError):
                 malformed += 1
+    session_id = _session_id(metadata, session_id)
     project = _workspace(metadata)
     steps = {}
     for idx, blob in connection.execute("SELECT idx,metadata FROM steps"):

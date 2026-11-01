@@ -36,8 +36,10 @@ class DesktopGuiTests(unittest.TestCase):
                     root.after_cancel(timer)
                 app.report=ledger.report(include_calls=True)
                 app.render()
-                root.update_idletasks()
+                root.update()
                 app.render_chart()
+                self.assertGreaterEqual(app.chart.winfo_width(),40,
+                    f"root={root.winfo_geometry()}, chart={app.chart.winfo_geometry()}, mapped={root.winfo_ismapped()}")
                 self.assertIn('$',app.metric_values['api_estimate'].get())
                 self.assertEqual(len(app.calls_table.get_children()),1)
                 self.assertTrue(app.chart_legend.winfo_children())

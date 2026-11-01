@@ -10,7 +10,7 @@ Token Ledger 按运行工具分别统计，模型名称另作维度。例如 Ope
 | --- | --- | --- |
 | Claude Code | 自动：`~/.claude/projects/**/*.jsonl` | 读取助手消息 usage，按消息身份合并流式记录；未保存调用无法补算 |
 | Codex | 自动：`~/.codex/sessions`、`archived_sessions` | 响应记录优先，旧日志使用累计计数增量；处理子 Agent 和分叉历史 |
-| agy / Antigravity | 自动：`~/.gemini/antigravity-cli`、`antigravity` 下的 `conversations/*.db` | 读取结构化用量，包含活动 WAL；未来 protobuf 变化需更新适配器 |
+| agy / Antigravity | 自动：`~/.gemini/antigravity-cli`、`antigravity` 下的 `conversations/*.db` | 读取结构化用量和活动 WAL；根会话 ID 归并子代理记录，未来 protobuf 变化需更新适配器 |
 | OpenCode | 自动：`$XDG_DATA_HOME/opencode` 或 `~/.local/share/opencode`；Windows 另查 `%LOCALAPPDATA%\opencode` | 支持新 SQLite `session_message/session_v2`、旧 `message/session`，及旧 `storage/message` JSON |
 | Gemini CLI | 自动：`~/.gemini/tmp/**/chats/session*.json`、`.jsonl` | 支持旧 JSON、新 JSONL、`GEMINI_CLI_HOME` 和沙盒缓存位置；有文件不一定有 usage |
 | Cline | 自动：编辑器 `User/globalStorage/saoudrizwan.claude-dev/**/ui_messages.json`，另查 `~/.cline/data` | 使用任务用量与模型元数据确认缓存口径；不确定时跳过并警告 |
@@ -35,8 +35,8 @@ Cline / Roo 不同版本和 API provider 使用过不同缓存口径，只有元
 
 ## 已知历史缺口
 
-- 本轮本机验证中，OpenCode 会话累计数比逐条消息用量多 **64,756 token**。程序提示此差额；缺少逐条时间／模型时不伪造日期或模型分配，所以当前统计可能小于工具保存的累计数。
-- 本机检查到的 **7 个 Gemini CLI 历史会话没有可用 usage**，不能由文件存在或对话内容补算。其他机器应以自身日志和提示为准。
+- 某些 OpenCode 会话累计数可能大于逐条消息用量。程序提示差额；缺少逐条时间／模型时不伪造分配，历史覆盖可能不完整。
+- 部分 Gemini CLI 历史会话没有可用 usage，不能由文件存在或对话内容补算。
 - 工具可能清理历史、关闭日志，或不保存失败／重试调用的 usage。账本保留已经采集的历史，无法恢复从未取得的记录。
 - 这些缺口与订阅额度、API 账单不同；未知用量不会冒充已确认的完整零用量。
 
@@ -54,3 +54,7 @@ Cline / Roo 不同版本和 API provider 使用过不同缓存口径，只有元
 记录须有真实用量、稳定调用身份和有效时间／会话。缺少模型或项目可归入 `unknown`；缺少 usage、ID、时区时间，或总计与分项不一致，会提示并跳过。JSONL 每行一个对象；JSON 可含单条、对象数组或 `events` 数组。
 
 [两条合成示例](../examples/tokenlog-usage.sample.jsonl) 可直接以「Token Ledger 标准记录 v1」导入，共 1,700 token，仅用于验证界面和采集器，与真实账号或模型调用无关。
+
+## agy 会话身份
+
+Antigravity 将子代理写入独立数据库。元数据存在 `root_conversation_id` 时，主会话和子代理按该根 ID 显示为一个会话；仍按稳定响应 ID 去重，模型统计与逐次价格分别保留。缺少明确根 ID 的历史库保留自身会话 ID，不根据相同项目、模型或时间猜测合并。已有账本在重新扫描可用日志时更新，日志已移走时仍保留历史用量。

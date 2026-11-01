@@ -49,6 +49,8 @@ def main():
             assert Path(installed()) == target, "Installation was not registered"
             assert (target / "Token Ledger.exe").is_file()
             assert (target / "Uninstall.exe").is_file()
+            assert "MIT License" in (target / "LICENSE").read_text(encoding="utf-8")
+            assert (target / "licenses/PYTHON.txt").is_file()
             start_menu = Path(os.environ["APPDATA"]) / "Microsoft/Windows/Start Menu/Programs/Token Ledger"
             assert (start_menu / "Token Ledger.lnk").is_file(), "Missing Start Menu shortcut"
             executable = target / "runtime/python.exe"

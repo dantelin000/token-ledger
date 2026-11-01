@@ -105,6 +105,11 @@ def build(app, output):
         image_version=plistlib.loads((application/"Contents/Info.plist").read_bytes())["CFBundleShortVersionString"]
         if image_version != __version__:
             raise RuntimeError("Bundle version incorrect")
+        if not (application/"Contents/Resources/LICENSE").is_file():
+            raise RuntimeError("Application license missing")
+        for name in ("PYTHON.txt", "TCL.txt", "TK.txt"):
+            if not (application/"Contents/Resources/licenses"/name).is_file():
+                raise RuntimeError("Runtime license notice missing")
         count,findings=audit(application)
         if findings:
             raise RuntimeError("Private-looking files present in app")

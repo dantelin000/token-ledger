@@ -10,7 +10,7 @@
 
 ### macOS 应用
 
-推荐使用经典拖拽安装包 **`dist/TokenLedger-2.2.0-macos-arm64.dmg`**：
+推荐使用经典拖拽安装包 **`dist/TokenLedger-2.2.1-macos-arm64.dmg`**：
 
 1. 双击 DMG，打开安装窗口。
 2. 把左侧 **Token Ledger** 拖到右侧 **Applications（应用程序）** 文件夹。
@@ -28,7 +28,7 @@ dist/macos-arm64/Token Ledger.app
 
 ### Windows
 
-使用 **`dist/TokenLedger-2.2.0-windows-x64-setup.exe`**（Windows 10 / 11，64 位）：
+使用 **`dist/TokenLedger-2.2.1-windows-x64-setup.exe`**（Windows 10 / 11，64 位）：
 
 1. 双击安装包，进入英文安装向导，点击「Next」。
 2. 选择安装位置，默认安装到当前用户的程序目录，不需要管理员权限。
@@ -59,6 +59,10 @@ python3 -m tokenlog
 ```
 
 如果默认 Python 缺少 `_tkinter`，改用 python.org 提供的带 Tk 解释器。也可在虚拟环境安装后，使用该环境的 Python 运行。关闭桌面窗口即停止本程序的扫描与刷新。
+
+## 2.2.1 会话归组修复
+
+agy / Antigravity 的子代理数据库现在按明确记录的根会话 ID 归组，同一会话不再被拆成多条。逐次用量、模型统计和 API 估值保留；已有账本在下次扫描时更新。缺少根会话 ID 的旧记录保留原归组。
 
 ## 界面语言
 

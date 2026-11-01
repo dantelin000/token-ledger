@@ -15,8 +15,8 @@ Download the installers from [Releases](https://github.com/dantelin000/token-led
 
 | Platform | Installer | Installation |
 | --- | --- | --- |
-| macOS, Apple Silicon | `TokenLedger-2.2.0-macos-arm64.dmg` | Open the DMG and drag Token Ledger to Applications. |
-| Windows 10 / 11, x64 | `TokenLedger-2.2.0-windows-x64-setup.exe` | Follow the setup wizard; a per-user install needs no administrator access. |
+| macOS, Apple Silicon | `TokenLedger-2.2.1-macos-arm64.dmg` | Open the DMG and drag Token Ledger to Applications. |
+| Windows 10 / 11, x64 | `TokenLedger-2.2.1-windows-x64-setup.exe` | Follow the setup wizard; a per-user install needs no administrator access. |
 
 Both installers include Python, Tcl/Tk and timezone data. Close the app before
 updating. Updates and uninstall preserve your ledger and preferences. The macOS
@@ -31,6 +31,13 @@ The default interface is **English**. To switch, open **Settings → Display &
 refresh → Language / 语言 → 简体中文 → Save**. The change applies immediately and
 persists across launches. Filters, usage records and user-entered names are
 preserved.
+
+## 2.2.1 fix
+
+Antigravity child agents now use the recorded root conversation ID, so one
+conversation stays together in Sessions across agent databases and models.
+Per-call tokens, model totals and API estimates are preserved. Existing ledgers
+are regrouped on their next scan; older logs without a root ID stay separate.
 
 ## Features
 

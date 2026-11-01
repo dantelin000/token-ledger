@@ -1,7 +1,11 @@
 from pathlib import Path
+import csv
+import io
+import shutil
 import sqlite3
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from tokenlog.agy import parse_file
 
@@ -66,6 +70,86 @@ def insert_generation(connection, retry=True):
 
 
 class AntigravityTests(unittest.TestCase):
+    def conversation(self, path, cascade, root, model, response):
+        connection = make_database(path)
+        connection.execute("UPDATE trajectory_meta SET cascade_id=?", (cascade,))
+        connection.execute("UPDATE trajectory_metadata_blob SET data=?",
+                           (blob(6, root) if root is not None else b"",))
+        stats = usage(response)
+        when = blob(1, scalar(1, 1790000000))
+        connection.execute("INSERT INTO steps VALUES (1,?)", (when + blob(9, stats),))
+        connection.execute("INSERT INTO gen_metadata VALUES (0,?)",
+                           (blob(1, blob(4, stats) + blob(19, model)) + blob(2, varint(1)),))
+        connection.commit()
+        connection.close()
+
+    def test_children_use_explicit_root_and_keep_distinct_call_ids(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root, child = Path(directory)/"root.db", Path(directory)/"child.db"
+            self.conversation(root,"root-one","root-one","claude-opus-5-5","root-response")
+            self.conversation(child,"child-one","root-one","gpt-6-sol","child-response")
+            a, b = parse_file(root).events[0], parse_file(child).events[0]
+            self.assertEqual(a["session_id"],b["session_id"])
+            self.assertEqual(a["session_id"],"root-one")
+            self.assertNotEqual(a["event_key"],b["event_key"])
+            self.assertNotEqual(a["model"],b["model"])
+
+    def test_missing_empty_or_invalid_root_keeps_cascade_identity(self):
+        from tokenlog.agy import _session_id
+        for root in (None,b"",b"  ",b"\xff",b"bad\x00id",42):
+            with self.subTest(root=root):
+                metadata={} if root is None else {6:[root]}
+                self.assertEqual(_session_id(metadata,"standalone"),"standalone")
+
+    def test_upgrade_merges_children_and_snapshots_without_changing_accounting(self):
+        from tokenlog.adapters import AdapterRegistry, SourceSpec
+        from tokenlog.store import Ledger, COUNTERS
+        with tempfile.TemporaryDirectory() as directory:
+            base=Path(directory)
+            sources=base/"conversations"
+            sources.mkdir()
+            for name,cascade,root,model,response in (
+                ("root","root-one","root-one","claude-opus-5-5","call-1"),
+                ("child-a","child-one","root-one","gpt-6-sol","call-2"),
+                ("child-b","child-two","root-one","gpt-6-sol","call-3"),
+                ("other","root-two","root-two","claude-opus-5-5","call-4"),
+                ("legacy","standalone",None,"claude-opus-5-5","call-5")):
+                self.conversation(sources/(name+".db"),cascade,root,model,response)
+            shutil.copyfile(sources/"child-a.db",sources/"snapshot.db")
+            original={p.name:p.read_bytes() for p in sources.iterdir()}
+            registry=AdapterRegistry(include_builtin=False,
+                extra_sources=[SourceSpec("agy","agy","agy",[base])])
+            ledger=Ledger(base/"ledger.db",base/"codex",base/"claude",registry=registry)
+            with patch("tokenlog.agy._session_id",side_effect=lambda metadata,cascade:cascade):
+                self.assertTrue(ledger.sync())
+            before=ledger.report(include_calls=True)
+            self.assertEqual(before["totals"]["sessions"],5)
+            with ledger.connect() as c:
+                c.execute("UPDATE metadata SET value='previous-parser' WHERE key='parser_signature'")
+            self.assertTrue(ledger.sync())
+            after=ledger.report(include_calls=True)
+            self.assertEqual(after["totals"]["sessions"],3)
+            self.assertEqual(after["totals"]["requests"],5)
+            grouped={r["session_id"]:r for r in after["sessions"]}
+            self.assertEqual(set(grouped),{"root-one","root-two","standalone"})
+            self.assertEqual(grouped["root-one"]["requests"],3)
+            self.assertIn("claude-opus-5-5",grouped["root-one"]["model"])
+            self.assertIn("gpt-6-sol",grouped["root-one"]["model"])
+            for key in (*COUNTERS,"requests","api_estimate"):
+                self.assertEqual(before["totals"][key],after["totals"][key],key)
+            self.assertEqual(before["models"],after["models"])
+            self.assertEqual(before["daily"],after["daily"])
+            self.assertEqual({r["event_key"]:r["api_estimate"] for r in before["calls"]},
+                             {r["event_key"]:r["api_estimate"] for r in after["calls"]})
+            csv_rows=list(csv.DictReader(io.StringIO(ledger.export_csv())))
+            self.assertEqual(len(csv_rows),5)
+            self.assertEqual(sum(int(r["total_tokens"]) for r in csv_rows),after["totals"]["total_tokens"])
+            self.assertEqual(sum(r["total_tokens"] for r in after["sessions"]),after["totals"]["total_tokens"])
+            # Force repeated snapshot parsing to verify that deduplication survives.
+            self.assertTrue(ledger.sync(force=True))
+            self.assertEqual(ledger.report()["sessions"],after["sessions"])
+            self.assertEqual({p.name:p.read_bytes() for p in sources.iterdir()},original)
+
     def test_generation_step_retry_dedup_and_subcategories(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "conversation.db"

@@ -101,7 +101,9 @@ def main():
                "--distpath", str(output), "--workpath", str(build / "work"),
                "--specpath", str(build), "--paths", str(ROOT),
                "--collect-data", "tzdata", "--collect-submodules", "tokenlog",
+               "--copy-metadata", "tzdata",
                "--add-data", str(ROOT / "LICENSE") + os.pathsep + ".",
+               "--add-data", str(ROOT / "packaging/licenses") + os.pathsep + "licenses",
                "--exclude-module", "pytest", "--exclude-module", "unittest",
                "--exclude-module", "tokenlog.static"]
     if sys.platform == "darwin":

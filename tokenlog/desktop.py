@@ -485,7 +485,7 @@ class Desktop:
         canvas = self.chart
         canvas.delete("all")
         width, height = canvas.winfo_width(), canvas.winfo_height()
-        if width < 40 or not self.report:
+        if not self.report:
             return
         daily = self.report["daily"]
         active = sorted({row['provider'] for row in daily})
@@ -502,6 +502,10 @@ class Desktop:
                 square.create_rectangle(1,1,10,10,fill=source_color(pid),outline='')
                 square.pack(side='left',padx=(0,5))
                 self.ttk.Label(part,text=names.get(pid,pid),style='Card.TLabel').pack(side='left')
+        # Legend data does not depend on the canvas being mapped yet. Windows
+        # can deliver its first usable canvas size after the initial render.
+        if width < 40:
+            return
         if not daily:
             self.chart_buckets=[]
             self.chart_hover.set(self.t('所选时期没有已记录用量。'))

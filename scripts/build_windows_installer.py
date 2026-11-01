@@ -218,10 +218,11 @@ def main():
     shutil.copyfile(TEMPLATES / "start.py", app / "start.py")
     extract_tzdata(timezone, app)
     shutil.copyfile(ROOT / "LICENSE", payload / "LICENSE")
+    shutil.copytree(ROOT / "packaging/licenses", payload / "licenses")
     (payload / "THIRD-PARTY-NOTICES.txt").write_text(
         "Token Ledger includes CPython, Tcl/Tk and other runtime libraries from\n"
         "Astral python-build-standalone, plus the Python tzdata package.\n"
-        "Their license texts are retained in runtime/LICENSE* and package dist-info.\n"
+        "Their license texts are retained in licenses/, runtime/LICENSE* and package dist-info.\n"
         "https://github.com/astral-sh/python-build-standalone\n"
         "https://github.com/python/tzdata\n", encoding="utf-8")
     icon = build / "TokenLedger.ico"
