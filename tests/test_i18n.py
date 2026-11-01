@@ -1,6 +1,6 @@
 """Language switching must leave accounting values and user content intact."""
 import copy
-from pathlib import Path
+from pathlib import PurePosixPath, PureWindowsPath
 from string import Formatter
 import unittest
 
@@ -55,7 +55,9 @@ class LocalizationTests(unittest.TestCase):
 
     def test_unknown_content_and_substitution_values_are_preserved(self):
         t = Translator()
-        self.assertEqual(t("账本路径：{0}", Path("/我的目录/账本.sqlite3")), "Ledger: /我的目录/账本.sqlite3")
+        for path, expected in ((PurePosixPath("/我的目录/账本.sqlite3"), "Ledger: /我的目录/账本.sqlite3"),
+                               (PureWindowsPath("C:/我的目录/账本.sqlite3"), "Ledger: C:\\我的目录\\账本.sqlite3")):
+            self.assertEqual(t("账本路径：{0}", path), expected)
         self.assertEqual(t.source_label("custom", "我的工具"), "我的工具")
         self.assertEqual(t.source_label("cursor", "我的 Cursor"), "我的 Cursor")
         self.assertEqual(t.message("用户写的任意内容"), "用户写的任意内容")
