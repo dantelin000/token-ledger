@@ -1,0 +1,70 @@
+name: Build desktop apps
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    tags:
+      - "v*"
+  pull_request:
+
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            label: macos-arm64
+            arch: arm64
+          - os: windows-latest
+            label: windows-x86_64
+            arch: x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          architecture: ${{ matrix.arch }}
+      - name: Install build dependencies
+        run: python -m pip install ".[build]"
+      - name: Verify application core
+        run: python -m unittest discover -s tests -v
+      - name: Audit public source and Git history
+        run: python scripts/audit_release.py --history
+      - name: Build native desktop app
+        if: runner.os == 'macOS'
+        run: python scripts/build_desktop.py --smoke-test
+      - name: Build drag-to-Applications DMG
+        if: runner.os == 'macOS'
+        run: |
+          python -m pip install ".[dmg]"
+          python scripts/build_dmg.py
+      - name: Install NSIS compiler
+        if: runner.os == 'Windows'
+        run: choco install nsis --yes --no-progress
+      - name: Build and verify Windows installation wizard
+        if: runner.os == 'Windows'
+        run: python scripts/build_windows_installer.py --smoke-test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TokenLedger-${{ matrix.label }}
+          path: |
+            dist/*.zip
+            dist/*.dmg
+            dist/*-setup.exe
+            dist/dmg-info.json
+            dist/windows-installer-info.json
+            dist/SHA256SUMS.txt
+            dist/*/build-info.json
+          if-no-files-found: error
