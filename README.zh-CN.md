@@ -37,7 +37,7 @@ dist/macos-arm64/Token Ledger.app
 
 安装包自带 Python、Tcl/Tk 和时区数据，安装及运行都无需另外下载这些组件。可从 Windows「设置 → 应用」或开始菜单卸载；**卸载保留用量账本和设置**。升级前请先退出程序。
 
-当前 `.exe` 已在 macOS 上通过 NSIS 交叉构建和文件核对，**尚未在真实 Windows 系统完成安装／运行验证**。Windows CI 已加入安装、原生界面自检、卸载和数据保留测试。构建记录见 `dist/windows-installer-info.json`。
+Windows CI 执行安装、原生界面自检、卸载和数据保留测试；每个发行包的实际验证结果记录在 `windows-installer-info.json`。macOS 上的交叉构建与文件核对不能替代 Windows 运行验收。
 
 源码版也可双击 `启动用量统计.bat`，或在项目目录运行：
 

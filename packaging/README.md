@@ -103,12 +103,14 @@ survive. It refuses to overwrite an existing registered installation. This is
 an automated runtime check; manual visual acceptance of the wizard is separate.
 
 `dist/windows-installer-info.json` records hashes, dependency versions, build
-host and whether the Windows round trip actually ran. The current local installer
-was cross-compiled on macOS; Windows runtime verification has **not** run here.
+host and whether the Windows round trip actually ran. Cross-compilation on
+macOS does not verify Windows runtime behavior; inspect this field for the
+particular release artifact.
 
 The checked-in GitHub Actions workflow builds macOS ARM and the Windows x64
-wizard independently, including the Windows round trip. Preparing that workflow
-does not confirm a Windows CI run. No upload or release is triggered locally.
+wizard independently, including native GUI tests and the Windows round trip.
+A prepared workflow alone does not confirm a passing run; release verification
+metadata records the actual results.
 
 Local macOS builds use PyInstaller's ad-hoc signature, without a Developer ID or notarization; Windows builds are unsigned. Production distribution requires the owner's signing setup. Source paths, usage databases, API keys and account credentials are not included in the app.
 
