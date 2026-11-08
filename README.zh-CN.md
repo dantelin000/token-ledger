@@ -6,13 +6,11 @@
 
 按 AI harness／客户端分别统计输入、输出、缓存和推理 token，提供日期筛选、每日趋势、模型统计、会话搜索和 CSV 导出。支持 Claude Code、Codex、agy / Antigravity、OpenCode、Gemini CLI、Cline、Roo Code 的本机记录，以及 Cursor 官方用量 CSV 导入。
 
-项目计量功能已加入 2.3.0 源码；下方的 2.2.1 下载包是此前公开发布的版本，不含此功能。
-
 ## 启动桌面程序
 
 ### macOS 应用
 
-推荐使用经典拖拽安装包 **`dist/TokenLedger-2.2.1-macos-arm64.dmg`**：
+推荐使用经典拖拽安装包 **`dist/TokenLedger-2.3.0-macos-arm64.dmg`**：
 
 1. 双击 DMG，打开安装窗口。
 2. 把左侧 **Token Ledger** 拖到右侧 **Applications（应用程序）** 文件夹。
@@ -30,7 +28,7 @@ dist/macos-arm64/Token Ledger.app
 
 ### Windows
 
-使用 **`dist/TokenLedger-2.2.1-windows-x64-setup.exe`**（Windows 10 / 11，64 位）：
+使用 **`dist/TokenLedger-2.3.0-windows-x64-setup.exe`**（Windows 10 / 11，64 位）：
 
 1. 双击安装包，进入英文安装向导，点击「Next」。
 2. 选择安装位置，默认安装到当前用户的程序目录，不需要管理员权限。

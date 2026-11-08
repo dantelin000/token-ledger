@@ -15,15 +15,12 @@ Download the installers from [Releases](https://github.com/dantelin000/token-led
 
 | Platform | Installer | Installation |
 | --- | --- | --- |
-| macOS, Apple Silicon | `TokenLedger-2.2.1-macos-arm64.dmg` | Open the DMG and drag Token Ledger to Applications. |
-| Windows 10 / 11, x64 | `TokenLedger-2.2.1-windows-x64-setup.exe` | Follow the setup wizard; a per-user install needs no administrator access. |
+| macOS, Apple Silicon | `TokenLedger-2.3.0-macos-arm64.dmg` | Open the DMG and drag Token Ledger to Applications. |
+| Windows 10 / 11, x64 | `TokenLedger-2.3.0-windows-x64-setup.exe` | Follow the setup wizard; a per-user install needs no administrator access. |
 
 Both installers include Python, Tcl/Tk and timezone data. Close the app before
 updating. Updates and uninstall preserve your ledger and preferences. The macOS
 build supports Apple Silicon only.
-
-The installers above are the latest published release (2.2.1); project meters
-are available in the 2.3.0 source until a newer release is published.
 
 These builds are unsigned / ad-hoc signed and macOS builds are not notarized.
 Build and verification details are recorded alongside the release downloads.

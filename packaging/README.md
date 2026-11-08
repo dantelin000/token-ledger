@@ -27,7 +27,7 @@ Use the virtual environment's Python for all commands after creating it. On macO
 Outputs:
 
 - macOS: `dist/macos-<architecture>/Token Ledger.app`, plus a ZIP preserving executable permissions and symlinks.
-- Windows installation wizard: `dist/TokenLedger-2.2.1-windows-x64-setup.exe`.
+- Windows installation wizard: `dist/TokenLedger-2.3.0-windows-x64-setup.exe`.
 - Optional Windows portable PyInstaller build: `dist/windows-<architecture>/Token Ledger.exe`, plus a ZIP.
 - `dist/TokenLedger-source.zip`: clean cross-platform source, with no logs, ledger, credentials, local config or virtual environment.
 
@@ -44,7 +44,7 @@ python -m pip install '.[dmg]'
 python scripts/build_dmg.py
 ```
 
-This produces `dist/TokenLedger-2.2.1-macos-arm64.dmg`, with the app on the left,
+This produces `dist/TokenLedger-2.3.0-macos-arm64.dmg`, with the app on the left,
 an `/Applications` folder link on the right, an arrow background and fixed Finder
 icon positions. The script verifies the image checksum, mounts it read-only,
 checks the layout and signature, and launches a temporary relocated copy's
