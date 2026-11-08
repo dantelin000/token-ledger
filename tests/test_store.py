@@ -35,6 +35,33 @@ class LedgerTests(unittest.TestCase):
              patch("tokenlog.parsers.parse_file", return_value=result):
             self.assertTrue(self.ledger.sync(force))
 
+    def test_project_meter_tracks_directories_and_selected_sessions_without_double_counting(self):
+        first = {**event('first'), 'project': '/work/game', 'session_id': 'one'}
+        child = {**event('child'), 'project': '/work/game/art', 'session_id': 'two'}
+        sibling = {**event('sibling'), 'project': '/work/game-other', 'session_id': 'three'}
+        manual = {**event('manual'), 'project': 'unknown', 'session_id': 'four'}
+        self.sync_events([first, child, sibling, manual])
+        pid = self.ledger.save_tracked_project('Game', ['/work/game'], [('codex', 'one'), ('codex', 'four')])
+        report = self.ledger.report()
+        project = report['tracked_projects'][0]
+        self.assertEqual((project['total_tokens'], project['sessions_count'], project['requests']), (330, 3, 3))
+        self.assertEqual(report['totals']['total_tokens'], 440)
+        self.assertEqual(self.ledger.report(provider='claude')['tracked_projects'][0]['total_tokens'], 0)
+        self.assertEqual(self.ledger.report('2026-11-02', '2026-11-02')['tracked_projects'][0]['total_tokens'], 0)
+        future = {**event('future'), 'project': '/work/game/src', 'session_id': 'five'}
+        self.source.write_text('changed\n')
+        self.sync_events([first, child, sibling, manual, future])
+        self.assertEqual(self.ledger.report()['tracked_projects'][0]['total_tokens'], 440)
+        reopened = Ledger(self.root / 'ledger.db', self.root / 'codex', self.root / 'claude')
+        self.assertEqual(reopened.tracked_projects()[0]['id'], pid)
+        reopened.save_tracked_project('Renamed', [], [('codex', 'four')], pid)
+        self.assertEqual(reopened.report()['tracked_projects'][0]['total_tokens'], 110)
+        reopened.delete_tracked_project(pid)
+        self.assertEqual(reopened.report()['tracked_projects'], [])
+        self.assertEqual(reopened.report()['totals']['total_tokens'], 550)
+        with self.assertRaises(ValueError):
+            reopened.save_tracked_project('Invalid', ['unknown'], [])
+
     def test_idempotent_and_duplicate_copied_sources(self):
         self.sync_events([event()])
         self.sync_events([event()])

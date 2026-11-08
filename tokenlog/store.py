@@ -87,6 +87,17 @@ class Ledger:
                 );
                 CREATE INDEX IF NOT EXISTS usage_time ON usage(timestamp,provider);
                 CREATE INDEX IF NOT EXISTS obs_key ON observations(provider,event_key);
+                CREATE TABLE IF NOT EXISTS tracked_projects (
+                    id INTEGER PRIMARY KEY, name TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS tracked_project_paths (
+                    project_id INTEGER NOT NULL, path TEXT NOT NULL,
+                    PRIMARY KEY(project_id,path)
+                );
+                CREATE TABLE IF NOT EXISTS tracked_project_sessions (
+                    project_id INTEGER NOT NULL, provider TEXT NOT NULL, session_id TEXT NOT NULL,
+                    PRIMARY KEY(project_id,provider,session_id)
+                );
             """)
             for table in ("observations", "usage"):
                 existing = {r[1] for r in c.execute(f"PRAGMA table_info({table})")}
@@ -238,6 +249,56 @@ class Ledger:
         with self.connect() as c:
             return [dict(r) for r in c.execute("SELECT * FROM usage" + (" WHERE " + " AND ".join(clauses) if clauses else "") + " ORDER BY timestamp DESC", params)]
 
+    def tracked_projects(self):
+        with self.connect() as c:
+            projects = [dict(r) for r in c.execute("SELECT id,name FROM tracked_projects ORDER BY name,id")]
+            for project in projects:
+                pid = project['id']
+                project['paths'] = [r[0] for r in c.execute("SELECT path FROM tracked_project_paths WHERE project_id=? ORDER BY path", (pid,))]
+                project['sessions'] = [(r[0], r[1]) for r in c.execute("SELECT provider,session_id FROM tracked_project_sessions WHERE project_id=? ORDER BY provider,session_id", (pid,))]
+            return projects
+
+    def save_tracked_project(self, name, paths, sessions, project_id=None):
+        name = name.strip()
+        if not name or len(name) > 120:
+            raise ValueError('项目名称不能为空且不能超过 120 个字符。')
+        paths = sorted(set(paths))
+        sessions = sorted(set(tuple(s) for s in sessions))
+        if any(not isinstance(p, str) or not p.strip() or p.strip().lower() == 'unknown' for p in paths):
+            raise ValueError('不能将未知路径作为自动归组规则。')
+        if any(len(s) != 2 or not all(isinstance(v, str) and v for v in s) for s in sessions):
+            raise ValueError('会话标识无效。')
+        with self.connect() as c:
+            if project_id is None:
+                project_id = c.execute('INSERT INTO tracked_projects(name) VALUES(?)', (name,)).lastrowid
+            elif not c.execute('UPDATE tracked_projects SET name=? WHERE id=?', (name, project_id)).rowcount:
+                raise ValueError('项目不存在。')
+            c.execute('DELETE FROM tracked_project_paths WHERE project_id=?', (project_id,))
+            c.execute('DELETE FROM tracked_project_sessions WHERE project_id=?', (project_id,))
+            c.executemany('INSERT INTO tracked_project_paths VALUES(?,?)', [(project_id, p) for p in paths])
+            c.executemany('INSERT INTO tracked_project_sessions VALUES(?,?,?)', [(project_id, *s) for s in sessions])
+        return project_id
+
+    def delete_tracked_project(self, project_id):
+        with self.connect() as c:
+            c.execute('DELETE FROM tracked_project_paths WHERE project_id=?', (project_id,))
+            c.execute('DELETE FROM tracked_project_sessions WHERE project_id=?', (project_id,))
+            c.execute('DELETE FROM tracked_projects WHERE id=?', (project_id,))
+
+    @staticmethod
+    def project_matches(project, row):
+        if (row['provider'], row['session_id']) in project['sessions']:
+            return True
+        raw_path = row['project'].replace('\\', '/')
+        if not raw_path or raw_path.lower() == 'unknown':
+            return False
+        path = raw_path.rstrip('/') or '/'
+        for rule in project['paths']:
+            rule = rule.replace('\\', '/').rstrip('/') or '/'
+            if path == rule or path.startswith(rule if rule == '/' else rule + '/'):
+                return True
+        return False
+
     def report(self, start=None, end=None, provider="all", include_calls=False):
         from .pricing import empty_total, add_total, finish_total
         rows = self.events(start, end, provider)
@@ -251,6 +312,8 @@ class Ledger:
         cost_groups = {}
         missing_models = defaultdict(int)
         calls = []
+        tracked = self.tracked_projects()
+        project_groups = [{**blank(), **p, 'session_keys': set(), 'last_seen': None} for p in tracked]
         for row in rows:
             p, sid = row["provider"], row["session_id"]
             day = datetime.fromisoformat(row["timestamp"].replace("Z", "+00:00")).astimezone(self.tz).date().isoformat()
@@ -265,7 +328,12 @@ class Ledger:
                 missing_models[row["model"]] += 1
             if include_calls:
                 calls.append({**row, "api_estimate": quote})
-            for group in (totals, providers[p], d, m, s):
+            matched = [group for group in project_groups if self.project_matches(group, row)]
+            for group in matched:
+                group['session_keys'].add((p, sid))
+                if group['last_seen'] is None or row['timestamp'] > group['last_seen']:
+                    group['last_seen'] = row['timestamp']
+            for group in (totals, providers[p], d, m, s, *matched):
                 for f in COUNTERS:
                     group[f] += row[f]
                 group["requests"] += 1
@@ -293,6 +361,8 @@ class Ledger:
         coverage.update(files=len(sources), errors=errors, notes=notes)
         for group, cost in cost_groups.values():
             group["api_estimate"] = finish_total(cost)
+        for group in project_groups:
+            group['sessions_count'] = len(group.pop('session_keys'))
         pricing = self.pricebook.info()
         pricing["unpriced_models"] = dict(missing_models)
         provider_rows = []
@@ -308,6 +378,7 @@ class Ledger:
             "daily": sorted(daily.values(), key=lambda r: (r["date"], r["provider"])),
             "models": sorted(models.values(), key=lambda r: -r["total_tokens"]),
             "sessions": sorted(sessions.values(), key=lambda r: r["last_seen"], reverse=True),
+            "tracked_projects": project_groups,
             "coverage": coverage, "sync": dict(self.state),
             "pricing": pricing, **({"calls": calls} if include_calls else {}),
         }

@@ -268,6 +268,20 @@ class Desktop:
             relief="flat", padx=16, pady=14, font=("PingFang SC" if sys.platform == "darwin" else "Microsoft YaHei UI", 11))
         self.coverage_text.pack(fill="both", expand=True)
         self.coverage_text.config(state="disabled")
+        projects = ttk.Frame(tabs, padding=(0, 10, 0, 0))
+        tabs.add(projects, text=self.t('项目计量'))
+        project_tools = ttk.Frame(projects)
+        project_tools.pack(fill='x', pady=(0, 8))
+        ttk.Button(project_tools, text=self.t('新建项目'), command=self.create_project).pack(side='left')
+        ttk.Button(project_tools, text=self.t('编辑项目'), command=self.edit_project).pack(side='left', padx=6)
+        ttk.Button(project_tools, text=self.t('删除项目'), command=self.delete_project).pack(side='left')
+        ttk.Label(project_tools, text=self.t('统计遵循上方日期与来源筛选；同一记录在单个项目内只计一次。'), style='Muted.TLabel').pack(side='right')
+        self.projects_table = self._table(projects, (
+            ('name', self.t('项目名称'), 210, 'w'), ('sessions', self.t('会话数'), 90, 'e'),
+            ('input', self.t('输入'), 125, 'e'), ('output', self.t('输出'), 125, 'e'),
+            ('total', self.t('Token 合计'), 145, 'e'), ('cost', self.t('API 等价值 USD'), 150, 'e'),
+            ('seen', self.t('最后记录'), 125, 'w')), height=9)
+        self.projects_table.bind('<Double-1>', self.edit_project)
         footer = ttk.Frame(outer)
         footer.pack(fill="x", pady=(12, 0))
         self.progress = ttk.Progressbar(footer, mode="indeterminate", length=75)
@@ -445,6 +459,33 @@ class Desktop:
         for index, row in enumerate(self.report["models"]):
             self.models_table.insert("", "end", values=(labels.get(row["provider"], row["provider"]), row["model"],
                 *(number(row[k]) for k in ("input_tokens", "output_tokens", "cached_input_tokens", "cache_write_tokens", "reasoning_tokens", "total_tokens")),self.t.money(row.get("api_estimate"))), tags=("odd",) if index % 2 else ())
+        self.projects_table.delete(*self.projects_table.get_children())
+        self.project_rows = {}
+        for index, row in enumerate(self.report.get('tracked_projects', [])):
+            iid = self.projects_table.insert('', 'end', values=(row['name'], number(row['sessions_count']),
+                number(row['input_tokens']), number(row['output_tokens']), number(row['total_tokens']),
+                self.t.money(row.get('api_estimate')), display_time(row['last_seen'], self.ledger.tz)),
+                tags=('odd',) if index % 2 else ())
+            self.project_rows[iid] = row
+
+    def create_project(self):
+        from .project_ui import ProjectEditor
+        ProjectEditor(self.root, self.ledger, self.t, on_save=lambda: self.refresh(False))
+
+    def edit_project(self, _event=None):
+        selected = self.projects_table.selection()
+        row = self.project_rows.get(selected[0]) if selected else None
+        if row:
+            from .project_ui import ProjectEditor
+            ProjectEditor(self.root, self.ledger, self.t, project=row, calls=self.report.get('calls', []), on_save=lambda: self.refresh(False))
+
+    def delete_project(self):
+        from tkinter import messagebox
+        selected = self.projects_table.selection()
+        row = self.project_rows.get(selected[0]) if selected else None
+        if row and messagebox.askyesno(self.t('删除项目'), self.t('删除项目“{0}”？原始用量记录不会删除。', row['name']), parent=self.root):
+            self.ledger.delete_tracked_project(row['id'])
+            self.refresh(False)
 
     def reset_calls(self):
         self.call_page = 0

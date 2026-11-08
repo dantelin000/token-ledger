@@ -22,6 +22,9 @@ Both installers include Python, Tcl/Tk and timezone data. Close the app before
 updating. Updates and uninstall preserve your ledger and preferences. The macOS
 build supports Apple Silicon only.
 
+The installers above are the latest published release (2.2.1); project meters
+are available in the 2.3.0 source until a newer release is published.
+
 These builds are unsigned / ad-hoc signed and macOS builds are not notarized.
 Build and verification details are recorded alongside the release downloads.
 
@@ -44,6 +47,7 @@ are regrouped on their next scan; older logs without a root ID stay separate.
 - Separate tool totals and stable chart colors, with legends and hover details.
 - Today, last seven days, this month, all time, or custom date ranges.
 - Search sessions and calls by project, model, time or ID.
+- Project meters group recorded directories (including subdirectories) and manually selected sessions across tools, with filtered token and API-equivalent totals. Later matching records are included automatically. A record counts once per project but may belong to multiple projects. Editing a project shows its included sessions; deleting one keeps the underlying usage.
 - Input, output, cache read, cache write and included reasoning token counts.
 - API-equivalent USD estimates for a period, session, model or individual record.
 - Explicit short/long cache-write prices; missing duration produces a range.
