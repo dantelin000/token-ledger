@@ -21,6 +21,7 @@ from .platforms import user_data_dir
 from .settings import AppSettings, load_settings, save_settings
 from .store import Ledger
 from .i18n import LANGUAGES, Translator
+from .responsive import ScrollableFrame, fit_window
 
 BG = "#f3f5f8"
 INK = "#192637"
@@ -78,8 +79,8 @@ class Desktop:
         self.last_filters = {"start": None, "end": None, "provider": "all"}
         self._style()
         root.title(self.t('Token Ledger · 本机用量账本'))
-        root.geometry("1300x900")
-        root.minsize(1040, 710)
+        root.minsize(640, 480)
+        fit_window(root, 1300, 900)
         root.configure(background=BG)
         root.protocol("WM_DELETE_WINDOW", self.close)
         self._menu()
@@ -144,9 +145,9 @@ class Desktop:
 
     def _build(self):
         ttk = self.ttk
-        outer = ttk.Frame(self.root, padding=(26, 20, 26, 12))
-        self.content = outer
-        outer.pack(fill="both", expand=True)
+        self.content = ScrollableFrame(self.root, padding=(26, 20, 26, 12))
+        self.content.pack(fill="both", expand=True)
+        outer = self.content.content
         top = ttk.Frame(outer)
         top.pack(fill="x", pady=(0, 18))
         title = ttk.Frame(top)

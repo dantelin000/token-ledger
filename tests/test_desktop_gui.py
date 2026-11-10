@@ -9,6 +9,83 @@ from unittest.mock import patch
 
 @unittest.skipUnless(os.environ.get("TOKENLOG_GUI_TEST") == "1", "native GUI session required")
 class DesktopGuiTests(unittest.TestCase):
+    def test_small_window_can_scroll_to_controls_and_dialog_actions(self):
+        import tkinter as tk
+        from tkinter import ttk
+        from tokenlog.adapters import AdapterRegistry
+        from tokenlog.desktop import Desktop
+        from tokenlog.dialogs import SourceManager, SourceEditor
+        from tokenlog.i18n import Translator
+        from tokenlog.price_ui import PriceEditor
+        from tokenlog.project_ui import ProjectEditor
+        from tokenlog.responsive import ScrollableFrame
+        from tokenlog.settings import AppSettings
+        from tokenlog.store import Ledger
+
+        def descendants(widget):
+            for child in widget.winfo_children():
+                yield child
+                yield from descendants(child)
+
+        def assert_reachable(viewport, widget):
+            viewport.canvas.xview_moveto(1)
+            viewport.canvas.yview_moveto(1)
+            root.update()
+            x, y = widget.winfo_rootx(), widget.winfo_rooty()
+            canvas = viewport.canvas
+            self.assertTrue(widget.winfo_ismapped(), str(widget))
+            self.assertGreaterEqual(x, canvas.winfo_rootx() - 1, str(widget))
+            self.assertGreaterEqual(y, canvas.winfo_rooty() - 1, str(widget))
+            self.assertLessEqual(x + widget.winfo_width(), canvas.winfo_rootx() + canvas.winfo_width() + 1, str(widget))
+            self.assertLessEqual(y + widget.winfo_height(), canvas.winfo_rooty() + canvas.winfo_height() + 1, str(widget))
+
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory)
+            settings = AppSettings()
+            ledger = Ledger(folder/'usage.db', folder/'codex', folder/'claude',
+                registry=AdapterRegistry(include_builtin=False, extra_sources=[]))
+            root = tk.Tk()
+            try:
+                app = Desktop(root, ledger, settings, folder/'settings.json')
+                for timer in root.tk.call('after', 'info'):
+                    root.after_cancel(timer)
+                root.geometry('1024x640+0+35')
+                app.report = ledger.report(include_calls=True)
+                app.render()
+                app.tabs.select(4)
+                root.update()
+                self.assertLess(app.content.canvas.yview()[1], 1)
+                create = next(w for w in descendants(app.tabs.nametowidget(app.tabs.tabs()[4]))
+                              if isinstance(w, ttk.Button) and w.cget('text') == 'New project')
+                assert_reachable(app.content, create)
+                app.content.canvas.yview_moveto(0)
+                root.update()
+                app.content.content.event_generate('<MouseWheel>', delta=-120)
+                root.update()
+                self.assertGreater(app.content.canvas.yview()[0], 0)
+                for language in ('en', 'zh_CN'):
+                    root.ui_language = language
+                    editor = ProjectEditor(root, ledger, Translator(language))
+                    manager_settings = AppSettings(language=language)
+                    manager = SourceManager(root, manager_settings)
+                    source = SourceEditor(root)
+                    price = PriceEditor(root, ledger.pricebook)
+                    for dialog, label in ((editor, '保存' if language == 'zh_CN' else 'Save'),
+                                          (manager, '保存' if language == 'zh_CN' else 'Save'),
+                                          (source, '保存数据源' if language == 'zh_CN' else 'Save source'),
+                                          (price, '保存自定义单价' if language == 'zh_CN' else 'Save custom prices')):
+                        dialog.geometry('800x500+0+35')
+                        root.update()
+                        viewport = next(w for w in dialog.winfo_children() if isinstance(w, ScrollableFrame))
+                        button = next(w for w in descendants(viewport.content)
+                                      if isinstance(w, ttk.Button) and w.cget('text') == label)
+                        assert_reachable(viewport, button)
+                        dialog.destroy()
+                app.close()
+            finally:
+                try: root.destroy()
+                except tk.TclError: pass
+
     def test_legend_call_values_and_native_dialogs(self):
         import tkinter as tk
         from tokenlog.desktop import Desktop, source_color
@@ -57,9 +134,11 @@ class DesktopGuiTests(unittest.TestCase):
                 app.projects_table.selection_set(app.projects_table.get_children()[0])
                 app.edit_project()
                 editor = next(w for w in root.winfo_children() if isinstance(w, ProjectEditor))
-                notebook = next(w for frame in editor.winfo_children() for w in frame.winfo_children() if isinstance(w, tk.ttk.Notebook))
+                from tokenlog.responsive import ScrollableFrame
+                viewport = next(w for w in editor.winfo_children() if isinstance(w, ScrollableFrame))
+                notebook = next(w for w in viewport.content.winfo_children() if isinstance(w, tk.ttk.Notebook))
                 included = notebook.nametowidget(notebook.tabs()[-1])
-                tree = next(w for w in included.winfo_children() if isinstance(w, tk.ttk.Treeview))
+                tree = next(w for frame in included.winfo_children() for w in frame.winfo_children() if isinstance(w, tk.ttk.Treeview))
                 self.assertEqual(tree.item(tree.get_children()[0], 'values')[-1], '1,100')
                 editor.destroy()
                 self.assertTrue(app.chart_legend.winfo_children())
@@ -80,7 +159,7 @@ class DesktopGuiTests(unittest.TestCase):
                 root.update_idletasks()
                 dialogs=[w for w in root.winfo_children() if isinstance(w,tk.Toplevel)]
                 self.assertEqual(len(dialogs),1)
-                self.assertGreaterEqual(dialogs[0].winfo_height(),680)
+                self.assertLessEqual(dialogs[0].winfo_height(), root.winfo_screenheight() - 50)
                 self.assertEqual(dialogs[0].language.get(),'English')
                 original_csv=ledger.export_csv()
                 app.period.set('Custom')

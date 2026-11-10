@@ -22,6 +22,9 @@ Both installers include Python, Tcl/Tk and timezone data. Close the app before
 updating. Updates and uninstall preserve your ledger and preferences. The macOS
 build supports Apple Silicon only.
 
+The installers above are the published 2.3.0 release. The small-screen layout
+fix is currently in the 2.3.1 source and has not yet been published as a release.
+
 These builds are unsigned / ad-hoc signed and macOS builds are not notarized.
 Build and verification details are recorded alongside the release downloads.
 
@@ -41,6 +44,7 @@ are regrouped on their next scan; older logs without a root ID stay separate.
 
 ## Features
 
+- Screen-aware window sizing and scrollable views for smaller displays.
 - Separate tool totals and stable chart colors, with legends and hover details.
 - Today, last seven days, this month, all time, or custom date ranges.
 - Search sessions and calls by project, model, time or ID.

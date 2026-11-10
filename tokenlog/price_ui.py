@@ -8,6 +8,7 @@ from tkinter import ttk, messagebox
 
 from .pricing import AS_OF
 from .i18n import Translator
+from .responsive import ScrollableFrame, fit_window
 
 
 class PriceEditor(tk.Toplevel):
@@ -16,15 +17,16 @@ class PriceEditor(tk.Toplevel):
         self.t = Translator(getattr(parent, "ui_language", "en"))
         self.book, self.on_save = book, on_save
         self.observed = tuple(observed)
-        self.geometry("840x690")
-        self.minsize(780, 650)
+        self.minsize(400, 300)
         self.transient(parent)
         self._build()
+        fit_window(self, 840, 690, parent)
 
     def _build(self):
         self.title(self.t('API 对照单价 · USD / 百万 token'))
-        body = ttk.Frame(self, padding=22)
-        body.pack(fill="both", expand=True)
+        viewport = ScrollableFrame(self, padding=22)
+        viewport.pack(fill="both", expand=True)
+        body = viewport.content
         ttk.Label(body, text=self.t('预计 API 等价值的对照单价'), font=("Arial", 17, "bold")).pack(anchor="w")
         ttk.Label(body, text=self.t('官方价目核验日期 {0} · Standard / 全局路由 · USD / 1,000,000 token', AS_OF), wraplength=740).pack(anchor="w", pady=(6,15))
         self.model = tk.StringVar()
@@ -138,8 +140,8 @@ def show_detail(parent, row, *, aggregate=False):
     t = Translator(language)
     window = tk.Toplevel(parent)
     window.title(t('会话 API 等价值') if aggregate else t('单次调用 · Token 与 API 等价值'))
-    window.geometry("1050x700")
-    window.minsize(800, 540)
+    window.minsize(400, 300)
+    fit_window(window, 1050, 700, parent)
     box = ttk.Frame(window, padding=18)
     box.pack(fill="both", expand=True)
     text = tk.Text(box, wrap="word", padx=14, pady=14, font=("Menlo",11))

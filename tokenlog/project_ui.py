@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import tkinter as tk
 from tkinter import ttk, messagebox
+from .responsive import ScrollableFrame, fit_window
 
 
 class ProjectEditor(tk.Toplevel):
@@ -10,8 +11,7 @@ class ProjectEditor(tk.Toplevel):
         super().__init__(parent)
         self.ledger, self.t, self.project, self.on_save = ledger, translate, project, on_save
         self.title(self.t('编辑项目') if project else self.t('新建项目'))
-        self.geometry('1000x700')
-        self.minsize(760, 540)
+        self.minsize(400, 300)
         self.name = tk.StringVar(value=project['name'] if project else '')
         self.selected = {
             'paths': set(project['paths'] if project else []),
@@ -28,8 +28,9 @@ class ProjectEditor(tk.Toplevel):
             self.path_labels.setdefault(key, key)
         for key in self.selected['sessions']:
             self.session_labels.setdefault(key, '  |  '.join(key))
-        frame = ttk.Frame(self, padding=16)
-        frame.pack(fill='both', expand=True)
+        viewport = ScrollableFrame(self, padding=16)
+        viewport.pack(fill='both', expand=True)
+        frame = viewport.content
         row = ttk.Frame(frame)
         row.pack(fill='x')
         ttk.Label(row, text=self.t('项目名称')).pack(side='left', padx=(0, 8))
@@ -54,10 +55,21 @@ class ProjectEditor(tk.Toplevel):
             lists.rowconfigure(1, weight=1)
             ttk.Label(lists, text=self.t('可选记录')).grid(row=0, column=0, sticky='w')
             ttk.Label(lists, text=self.t('已加入项目')).grid(row=0, column=2, sticky='w')
-            available = tk.Listbox(lists, selectmode='extended', exportselection=False)
-            chosen = tk.Listbox(lists, selectmode='extended', exportselection=False)
-            available.grid(row=1, column=0, sticky='nsew')
-            chosen.grid(row=1, column=2, sticky='nsew')
+            def make_list(column):
+                box_frame = ttk.Frame(lists)
+                box_frame.grid(row=1, column=column, sticky='nsew')
+                box_frame.rowconfigure(0, weight=1)
+                box_frame.columnconfigure(0, weight=1)
+                box = tk.Listbox(box_frame, selectmode='extended', exportselection=False)
+                ybar = ttk.Scrollbar(box_frame, orient='vertical', command=box.yview)
+                xbar = ttk.Scrollbar(box_frame, orient='horizontal', command=box.xview)
+                box.configure(yscrollcommand=ybar.set, xscrollcommand=xbar.set)
+                box.grid(row=0, column=0, sticky='nsew')
+                ybar.grid(row=0, column=1, sticky='ns')
+                xbar.grid(row=1, column=0, sticky='ew')
+                return box
+            available = make_list(0)
+            chosen = make_list(2)
             controls = ttk.Frame(lists, padding=8)
             controls.grid(row=1, column=1)
             ttk.Button(controls, text='→', command=lambda k=kind: self.move(k, True)).pack(pady=4)
@@ -69,11 +81,20 @@ class ProjectEditor(tk.Toplevel):
             panel = ttk.Frame(tabs, padding=8)
             tabs.add(panel, text=self.t('统计内会话'))
             ttk.Label(panel, text=self.t('以下会话按当前日期和来源筛选显示；修改规则后请保存再查看。')).pack(anchor='w', pady=(0, 8))
-            tree = ttk.Treeview(panel, columns=('provider', 'session', 'tokens'), show='headings')
+            table = ttk.Frame(panel)
+            table.pack(fill='both', expand=True)
+            table.rowconfigure(0, weight=1)
+            table.columnconfigure(0, weight=1)
+            tree = ttk.Treeview(table, columns=('provider', 'session', 'tokens'), show='headings')
             for key, label, width in (('provider', self.t('来源'), 140), ('session', self.t('会话 ID'), 500), ('tokens', self.t('Token 合计'), 170)):
                 tree.heading(key, text=label)
                 tree.column(key, width=width, anchor='e' if key == 'tokens' else 'w')
-            tree.pack(fill='both', expand=True)
+            ybar = ttk.Scrollbar(table, orient='vertical', command=tree.yview)
+            xbar = ttk.Scrollbar(table, orient='horizontal', command=tree.xview)
+            tree.configure(yscrollcommand=ybar.set, xscrollcommand=xbar.set)
+            tree.grid(row=0, column=0, sticky='nsew')
+            ybar.grid(row=0, column=1, sticky='ns')
+            xbar.grid(row=1, column=0, sticky='ew')
             groups = {}
             for call in calls or []:
                 if ledger.project_matches(project, call):
@@ -86,6 +107,7 @@ class ProjectEditor(tk.Toplevel):
         ttk.Button(buttons, text=self.t('取消'), command=self.destroy).pack(side='right')
         ttk.Button(buttons, text=self.t('保存'), command=self.save).pack(side='right', padx=8)
         self.transient(parent)
+        fit_window(self, 1000, 700, parent)
 
     def populate(self, kind):
         w = self.widgets[kind]

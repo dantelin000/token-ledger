@@ -9,6 +9,7 @@ from tkinter import filedialog, messagebox, ttk
 from .adapters import SourceSpec, KIND_LABELS
 from .settings import AppSettings
 from .i18n import LANGUAGES, Translator
+from .responsive import ScrollableFrame, fit_window
 
 
 FORMATS = dict(KIND_LABELS)
@@ -17,10 +18,7 @@ GENERIC_KINDS = tuple(FORMATS)
 
 
 def _center(window, parent, width, height):
-    window.update_idletasks()
-    x = parent.winfo_rootx() + max(0, (parent.winfo_width() - width) // 2)
-    y = parent.winfo_rooty() + max(0, (parent.winfo_height() - height) // 2)
-    window.geometry(f"{width}x{height}+{x}+{y}")
+    fit_window(window, width, height, parent)
 
 
 class SourceEditor(tk.Toplevel):
@@ -31,7 +29,7 @@ class SourceEditor(tk.Toplevel):
         self.formats = {key: self.t(value) for key, value in FORMATS.items()}
         self.title(self.t('编辑数据源') if existing else self.t('添加 Harness 数据源'))
         self.transient(parent)
-        self.minsize(640, 610)
+        self.minsize(400, 300)
         self.result = None
         self.existing = existing
         self.taken = set(taken)
@@ -41,8 +39,9 @@ class SourceEditor(tk.Toplevel):
         kind = existing.kind if existing else "tokenlog"
         self.kind = tk.StringVar(value=self.formats[kind])
         self.enabled = tk.BooleanVar(value=existing.enabled if existing else True)
-        body = ttk.Frame(self, padding=20)
-        body.pack(fill="both", expand=True)
+        viewport = ScrollableFrame(self, padding=20)
+        viewport.pack(fill="both", expand=True)
+        body = viewport.content
         body.columnconfigure(1, weight=1)
         ttk.Label(body, text=self.t('显示名称')).grid(row=0, column=0, sticky="w", padx=(0, 14), pady=5)
         label_entry = ttk.Entry(body, textvariable=self.label)
@@ -157,14 +156,15 @@ class SourceManager(tk.Toplevel):
         self.formats = {key: self.t(value) for key, value in FORMATS.items()}
         self.title(self.t('数据源与偏好设置'))
         self.transient(parent)
-        self.minsize(800, 680)
+        self.minsize(400, 300)
         self.result = None
         self.settings = AppSettings.from_dict(settings.to_dict())
         self.timezone = tk.StringVar(value=settings.timezone)
         self.interval = tk.StringVar(value=str(settings.interval))
         self.language = tk.StringVar(value=LANGUAGES[settings.language])
-        body = ttk.Frame(self, padding=20)
-        body.pack(fill="both", expand=True)
+        viewport = ScrollableFrame(self, padding=20)
+        viewport.pack(fill="both", expand=True)
+        body = viewport.content
         ttk.Label(body, text=self.t('AI Harness 数据源'), font=("", 15, "bold")).pack(anchor="w")
         ttk.Label(body, text=self.t('内置工具自动查找本机日志；其他工具可通过通用 usage 格式接入。'), wraplength=680).pack(anchor="w", pady=(5, 16))
         table = ttk.Frame(body)
