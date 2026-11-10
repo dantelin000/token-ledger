@@ -28,11 +28,14 @@ class DesktopGuiTests(unittest.TestCase):
                 yield from descendants(child)
 
         def assert_reachable(viewport, widget):
-            viewport.canvas.xview_moveto(1)
             viewport.canvas.yview_moveto(1)
             root.update()
-            x, y = widget.winfo_rootx(), widget.winfo_rooty()
             canvas = viewport.canvas
+            right = widget.winfo_rootx() - canvas.winfo_rootx() + canvas.canvasx(0) + widget.winfo_width()
+            region_width = float(canvas.cget('scrollregion').split()[2])
+            canvas.xview_moveto(max(0, right - canvas.winfo_width() + 4) / region_width)
+            root.update()
+            x, y = widget.winfo_rootx(), widget.winfo_rooty()
             self.assertTrue(widget.winfo_ismapped(), str(widget))
             self.assertGreaterEqual(x, canvas.winfo_rootx() - 1, str(widget))
             self.assertGreaterEqual(y, canvas.winfo_rooty() - 1, str(widget))
